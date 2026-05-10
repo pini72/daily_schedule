@@ -425,24 +425,38 @@ class DailyScheduleCard extends HTMLElement {
       row.style.boxShadow = "";
     });
 
-    this._createTimeInput(range, "from", row);
-
+    const timesGroup = document.createElement("div");
+    Object.assign(timesGroup.style, {
+      display: "flex",
+      flexWrap: "wrap",
+      alignItems: "center",
+      gap: "8px",
+      flex: "1",
+      minWidth: "0",
+    });
+    this._createTimeInput(range, "from", timesGroup);
     const arrow = document.createElement("ha-icon");
     arrow.icon = "mdi:arrow-right-thick";
     arrow.style.color = "var(--secondary-text-color)";
-    row.appendChild(arrow);
+    timesGroup.appendChild(arrow);
+    this._createTimeInput(range, "to", timesGroup);
+    row.appendChild(timesGroup);
 
-    this._createTimeInput(range, "to", row);
+    const controls = document.createElement("div");
+    Object.assign(controls.style, {
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      marginInlineStart: "auto",
+    });
 
     const toggle = document.createElement("ha-switch");
-    toggle.style.marginInlineStart = "auto";
-    toggle.style.paddingInlineStart = "8px";
     toggle.checked = !range.disabled;
     toggle.addEventListener("change", () => {
       range.disabled = !range.disabled;
       this._saveBackendEntity();
     });
-    row.appendChild(toggle);
+    controls.appendChild(toggle);
 
     const remove = document.createElement("ha-icon");
     remove.icon = "mdi:delete-outline";
@@ -464,7 +478,8 @@ class DailyScheduleCard extends HTMLElement {
       this._createDialogRows();
       this._saveBackendEntity();
     };
-    row.appendChild(remove);
+    controls.appendChild(remove);
+    row.appendChild(controls);
 
     return row;
   }
@@ -514,7 +529,6 @@ class DailyScheduleCard extends HTMLElement {
     };
 
     Object.assign(time_input.style, {
-      width: `${this._input_time_width}px`,
       minWidth: `${this._input_time_width}px`,
       boxSizing: "border-box",
       padding: "6px 8px",
@@ -560,8 +574,15 @@ class DailyScheduleCard extends HTMLElement {
       }
     };
 
-    row.appendChild(type_symbol);
-    row.appendChild(time_input);
+    const fieldGroup = document.createElement("div");
+    Object.assign(fieldGroup.style, {
+      display: "flex",
+      alignItems: "center",
+      gap: "6px",
+    });
+    fieldGroup.appendChild(type_symbol);
+    fieldGroup.appendChild(time_input);
+    row.appendChild(fieldGroup);
   }
 
   _setInputType(type, symbol, input, value) {
@@ -589,7 +610,7 @@ class DailyScheduleCard extends HTMLElement {
       dummyInput.style.visibility = "hidden";
       this.appendChild(dummyInput);
       setTimeout(() => {
-        this._input_time_width = Math.min(dummyInput.getBoundingClientRect().width, 100);
+        this._input_time_width = Math.max(dummyInput.getBoundingClientRect().width, 110);
         dummyInput.remove();
       }, 0);
     }
