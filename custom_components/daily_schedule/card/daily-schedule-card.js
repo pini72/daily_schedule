@@ -1,9 +1,8 @@
 class DailyScheduleCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
-    if (!this._config) {
-      return;
-    }
+    if (!this._config) return;
+
     if (!this._dialog) {
       this._getInputTimeWidth();
       this._createDialog();
@@ -11,6 +10,7 @@ class DailyScheduleCard extends HTMLElement {
     } else {
       this._dialog.hass = hass;
     }
+
     if (!this._content) {
       this._content = this._createContent();
       if (this._config.title || this._config.card) {
@@ -35,9 +35,7 @@ class DailyScheduleCard extends HTMLElement {
       this._config = config;
       return;
     }
-    if (!config.entities) {
-      throw new Error("You need to define entities");
-    }
+    if (!config.entities) throw new Error("You need to define entities");
     this._config = config;
     this.innerHTML = "";
     this._content = null;
@@ -51,10 +49,7 @@ class DailyScheduleCard extends HTMLElement {
   static getConfigForm() {
     return {
       schema: [
-        {
-          name: "title",
-          selector: { text: {} },
-        },
+        { name: "title", selector: { text: {} } },
         {
           name: "entities",
           required: true,
@@ -62,10 +57,7 @@ class DailyScheduleCard extends HTMLElement {
             entity: {
               multiple: true,
               reorder: true,
-              filter: {
-                domain: "binary_sensor",
-                integration: "daily_schedule",
-              },
+              filter: { domain: "binary_sensor", integration: "daily_schedule" },
             },
           },
         },
@@ -74,9 +66,7 @@ class DailyScheduleCard extends HTMLElement {
         if (Array.isArray(config?.entities)) {
           for (const entry of config.entities) {
             if (typeof entry !== "string") {
-              throw new Error(
-                "Visual editor is not available for entity options.",
-              );
+              throw new Error("Visual editor is not available for entity options.");
             }
           }
         }
@@ -84,13 +74,9 @@ class DailyScheduleCard extends HTMLElement {
       computeLabel: (schema, localize) => {
         switch (schema.name) {
           case "title":
-            return `${localize("ui.panel.lovelace.editor.card.generic.title")} (${localize(
-              "ui.panel.lovelace.editor.card.config.optional",
-            )})`;
+            return `${localize("ui.panel.lovelace.editor.card.generic.title")} (${localize("ui.panel.lovelace.editor.card.config.optional")})`;
           case "entities":
-            return `${localize("ui.panel.lovelace.editor.card.generic.entities")} (${localize(
-              "ui.panel.lovelace.editor.card.config.required",
-            )})`;
+            return `${localize("ui.panel.lovelace.editor.card.generic.entities")} (${localize("ui.panel.lovelace.editor.card.config.required")})`;
           default:
             return schema.name;
         }
@@ -103,20 +89,25 @@ class DailyScheduleCard extends HTMLElement {
   }
 
   _createContent() {
-    const content = document.createElement("DIV");
+    const content = document.createElement("div");
     content._rows = [];
+    Object.assign(content.style, {
+      display: "flex",
+      flexDirection: "column",
+      gap: "8px",
+    });
+
     for (const entry of this._config.entities) {
       const entity = entry.entity || entry;
-      const row = document.createElement("DIV");
+      const row = document.createElement("div");
       row._entity = entity;
       row._template_value = entry.template || this._config.template;
       row.classList.add("card-content");
+
       if (this._hass.states[entity]) {
         const rowContent = this._createCardRow(
           entity,
-          entry.name ||
-            this._hass.states[entity].attributes.friendly_name ||
-            entity,
+          entry.name || this._hass.states[entity].attributes.friendly_name || entity,
         );
         row._content = rowContent;
         this._setCardRowValue(row);
@@ -124,6 +115,7 @@ class DailyScheduleCard extends HTMLElement {
         content._rows.push(row);
       } else {
         row.innerText = `Entity not found: ${entity}`;
+        row.style.color = "var(--error-color)";
       }
       content.appendChild(row);
     }
@@ -139,30 +131,73 @@ class DailyScheduleCard extends HTMLElement {
   }
 
   _createCardRow(entity, name) {
-    const content = document.createElement("DIV");
-    content.style.cursor = "pointer";
-    content.style.display = "flex";
-    content.style.alignItems = "center";
-    content.style.gap = "16px";
+    const content = document.createElement("div");
+    Object.assign(content.style, {
+      cursor: "pointer",
+      display: "flex",
+      flexDirection: "column",
+      gap: "8px",
+      padding: "12px",
+      borderRadius: "12px",
+      border: "1px solid var(--divider-color)",
+      transition: "transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease",
+    });
+
+    content.addEventListener("mouseenter", () => {
+      content.style.transform = "translateY(-1px)";
+      content.style.boxShadow = "0 4px 14px rgba(0,0,0,0.08)";
+      content.style.backgroundColor = "var(--state-icon-hover-color, rgba(0,0,0,0.03))";
+    });
+    content.addEventListener("mouseleave", () => {
+      content.style.transform = "";
+      content.style.boxShadow = "";
+      content.style.backgroundColor = "";
+    });
+
+    const topRow = document.createElement("div");
+    Object.assign(topRow.style, {
+      display: "flex",
+      alignItems: "center",
+      gap: "12px",
+    });
+
     const icon = document.createElement("state-badge");
     icon.style.flex = "none";
     icon.hass = this._hass;
     icon.stateObj = this._hass.states[entity];
     icon.stateColor = true;
     content._icon = icon;
-    content.appendChild(icon);
-    const name_element = document.createElement("P");
-    name_element.innerText = name;
-    content.appendChild(name_element);
-    const value_element = document.createElement("P");
-    value_element.style.marginInlineStart = "auto";
-    value_element.style.textAlign = "end";
-    content._value_element = value_element;
-    content.appendChild(value_element);
+    topRow.appendChild(icon);
+
+    const nameEl = document.createElement("span");
+    nameEl.innerText = name;
+    Object.assign(nameEl.style, {
+      fontWeight: "500",
+      fontSize: "15px",
+      color: "var(--primary-text-color)",
+    });
+    topRow.appendChild(nameEl);
+    content.appendChild(topRow);
+
+    const valueEl = document.createElement("div");
+    Object.assign(valueEl.style, {
+      marginInlineStart: "calc(40px + 12px)",
+      fontSize: "13px",
+      color: "var(--secondary-text-color)",
+      padding: "4px 10px",
+      background: "rgba(var(--rgb-primary-color, 3,169,244), 0.08)",
+      borderRadius: "8px",
+      display: "inline-block",
+      maxWidth: "fit-content",
+    });
+    content._value_element = valueEl;
+    content.appendChild(valueEl);
+
     content.onclick = () => {
       this._dialog._entity = entity;
       this._dialog.headerTitle = name;
       this._dialog._message.innerText = "";
+      this._dialog._message.style.display = "none";
       this._dialog._schedule = [...this._getStateSchedule(entity)];
       this._createDialogRows();
       this._dialog.open = true;
@@ -209,9 +244,8 @@ class DailyScheduleCard extends HTMLElement {
   }
 
   _setCardRowValue(row) {
-    if (!this._rowEntityChanged(row)) {
-      return;
-    }
+    if (!this._rowEntityChanged(row)) return;
+
     if (!row._template_value) {
       const schedule = this._getStateSchedule(row._entity, true);
       if (!schedule.length) {
@@ -227,6 +261,10 @@ class DailyScheduleCard extends HTMLElement {
     } else {
       this._rowTemplateValue(row);
     }
+  }
+
+  _isMobileView() {
+    return window.matchMedia("(max-width: 600px)").matches;
   }
 
   _createDialog() {
@@ -251,36 +289,71 @@ class DailyScheduleCard extends HTMLElement {
     });
     this._createDialogHeader();
     this._dialog.open = false;
+
     const scroller = document.createElement("div");
     Object.assign(scroller.style, {
-      display: "inline-block",
-      width: "max-content",
-      maxWidth: "none",
-      whiteSpace: "nowrap",
+      display: "flex",
+      flexDirection: "column",
+      gap: "8px",
+      padding: "4px 0 16px",
       boxSizing: "border-box",
     });
     this._dialog._scroller = scroller;
     this._dialog.appendChild(scroller);
-    const plus = document.createElement("ha-icon-button");
-    plus.style.marginLeft = "-12px";
-    const icon = document.createElement("ha-icon");
-    icon.icon = "mdi:plus";
-    plus.appendChild(icon);
+
+    const plus = document.createElement("button");
+    Object.assign(plus.style, {
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      padding: "11px 18px",
+      marginTop: "4px",
+      background: "#ffeb3b",
+      color: "#000",
+      border: "2px solid #fbc02d",
+      borderRadius: "12px",
+      cursor: "pointer",
+      fontSize: "14px",
+      fontWeight: "600",
+      transition: "transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease",
+      boxShadow: "0 2px 6px rgba(255,235,59,0.35)",
+    });
+    plus.addEventListener("mouseenter", () => {
+      plus.style.background = "#fdd835";
+      plus.style.transform = "translateY(-1px)";
+      plus.style.boxShadow = "0 4px 14px rgba(255,235,59,0.45)";
+    });
+    plus.addEventListener("mouseleave", () => {
+      plus.style.background = "#ffeb3b";
+      plus.style.transform = "";
+      plus.style.boxShadow = "0 2px 6px rgba(255,235,59,0.35)";
+    });
+    const plusIcon = document.createElement("ha-icon");
+    plusIcon.icon = "mdi:plus";
+    plusIcon.style.setProperty("--mdc-icon-size", "20px");
+    plus.appendChild(plusIcon);
+    const plusLabel = document.createElement("span");
+    plusLabel.innerText = "Add time range";
+    plus.appendChild(plusLabel);
     plus.onclick = () => {
       this._dialog._schedule.push({ from: null, to: null });
       this._createDialogRows();
       this._saveBackendEntity();
     };
     this._dialog._plus = plus;
-    const message = document.createElement("P");
-    message.style.display = "flex";
-    message.style.color = "red";
-    message.innerText = "";
-    this._dialog._message = message;
-  }
 
-  _isMobileView() {
-    return window.matchMedia("(max-width: 600px)").matches;
+    const message = document.createElement("div");
+    Object.assign(message.style, {
+      display: "none",
+      color: "var(--error-color, #d32f2f)",
+      padding: "10px 14px",
+      background: "rgba(211,47,47,0.08)",
+      borderRadius: "8px",
+      border: "1px solid rgba(211,47,47,0.2)",
+      fontSize: "13px",
+      fontWeight: "500",
+    });
+    this._dialog._message = message;
   }
 
   _createDialogRows() {
@@ -293,28 +366,30 @@ class DailyScheduleCard extends HTMLElement {
   }
 
   _createDialogHeader() {
-    const header = document.createElement("DIV");
+    const header = document.createElement("div");
     header.slot = "headerNavigationIcon";
-    header.style.display = "flex";
-    header.style.alignItems = "center";
+    Object.assign(header.style, {
+      display: "flex",
+      alignItems: "center",
+    });
 
     const close = document.createElement("ha-icon-button");
     close.dataset.role = "dialog-close";
-    const close_icon = document.createElement("ha-icon");
-    close_icon.icon = "mdi:close";
-    close.appendChild(close_icon);
+    const closeIcon = document.createElement("ha-icon");
+    closeIcon.icon = "mdi:close";
+    close.appendChild(closeIcon);
     close.onclick = () => {
       this._dialog.open = false;
     };
     header.appendChild(close);
 
-    const more_info = document.createElement("ha-icon-button");
-    more_info.slot = "headerActionItems";
-    more_info.dataset.role = "more-info";
-    const more_info_icon = document.createElement("ha-icon");
-    more_info_icon.icon = "mdi:information-outline";
-    more_info.appendChild(more_info_icon);
-    more_info.onclick = () => {
+    const moreInfo = document.createElement("ha-icon-button");
+    moreInfo.slot = "headerActionItems";
+    moreInfo.dataset.role = "more-info";
+    const moreInfoIcon = document.createElement("ha-icon");
+    moreInfoIcon.icon = "mdi:information-outline";
+    moreInfo.appendChild(moreInfoIcon);
+    moreInfo.onclick = () => {
       this._dialog.open = false;
       const event = new Event("hass-more-info", {
         bubbles: true,
@@ -324,29 +399,44 @@ class DailyScheduleCard extends HTMLElement {
       event.detail = { entityId: this._dialog._entity };
       this.dispatchEvent(event);
     };
-    this._dialog.appendChild(more_info);
+    this._dialog.appendChild(moreInfo);
     this._dialog.appendChild(header);
   }
 
   _createDialogRow(range, index) {
-    const row = document.createElement("DIV");
-    row.style.color = getComputedStyle(document.body).getPropertyValue("color");
-    row.style.display = "flex";
-    row.style.gap = "4px";
-    row.style.alignItems = "center";
-    row.style.marginTop = "12px";
+    const row = document.createElement("div");
+    Object.assign(row.style, {
+      color: "var(--primary-text-color)",
+      display: "flex",
+      flexWrap: "wrap",
+      gap: "8px",
+      alignItems: "center",
+      padding: "12px 14px",
+      borderRadius: "12px",
+      border: "1px solid var(--divider-color)",
+      transition: "transform 0.15s ease, box-shadow 0.15s ease",
+    });
+    row.addEventListener("mouseenter", () => {
+      row.style.transform = "translateY(-1px)";
+      row.style.boxShadow = "0 4px 12px rgba(0,0,0,0.07)";
+    });
+    row.addEventListener("mouseleave", () => {
+      row.style.transform = "";
+      row.style.boxShadow = "";
+    });
 
     this._createTimeInput(range, "from", row);
 
     const arrow = document.createElement("ha-icon");
     arrow.icon = "mdi:arrow-right-thick";
+    arrow.style.color = "var(--secondary-text-color)";
     row.appendChild(arrow);
 
     this._createTimeInput(range, "to", row);
 
     const toggle = document.createElement("ha-switch");
-    toggle.style.marginLeft = "auto";
-    toggle.style.paddingLeft = "16px";
+    toggle.style.marginInlineStart = "auto";
+    toggle.style.paddingInlineStart = "8px";
     toggle.checked = !range.disabled;
     toggle.addEventListener("change", () => {
       range.disabled = !range.disabled;
@@ -356,11 +446,21 @@ class DailyScheduleCard extends HTMLElement {
 
     const remove = document.createElement("ha-icon");
     remove.icon = "mdi:delete-outline";
-    remove.style.cursor = "pointer";
+    Object.assign(remove.style, {
+      cursor: "pointer",
+      color: "var(--error-color, #d32f2f)",
+      padding: "5px",
+      borderRadius: "50%",
+      transition: "background 0.15s ease",
+    });
+    remove.addEventListener("mouseenter", () => {
+      remove.style.background = "rgba(211,47,47,0.1)";
+    });
+    remove.addEventListener("mouseleave", () => {
+      remove.style.background = "";
+    });
     remove.onclick = () => {
-      this._dialog._schedule = this._dialog._schedule.filter(
-        (_, i) => i !== index,
-      );
+      this._dialog._schedule = this._dialog._schedule.filter((_, i) => i !== index);
       this._createDialogRows();
       this._saveBackendEntity();
     };
@@ -389,7 +489,19 @@ class DailyScheduleCard extends HTMLElement {
       this._setInputType("time", type_symbol, time_input, range[type]);
     }
 
-    type_symbol.style.cursor = "pointer";
+    Object.assign(type_symbol.style, {
+      cursor: "pointer",
+      color: "var(--primary-color)",
+      padding: "4px",
+      borderRadius: "6px",
+      transition: "background 0.15s ease",
+    });
+    type_symbol.addEventListener("mouseenter", () => {
+      type_symbol.style.background = "rgba(var(--rgb-primary-color, 3,169,244), 0.1)";
+    });
+    type_symbol.addEventListener("mouseleave", () => {
+      type_symbol.style.background = "";
+    });
     type_symbol.onclick = () => {
       if (type_symbol._type === "time") {
         this._setInputType("sunrise", type_symbol, time_input, null);
@@ -405,8 +517,23 @@ class DailyScheduleCard extends HTMLElement {
       width: `${this._input_time_width}px`,
       minWidth: `${this._input_time_width}px`,
       boxSizing: "border-box",
-      padding: "4px 0",
+      padding: "6px 8px",
+      border: "1.5px solid var(--divider-color)",
+      borderRadius: "8px",
+      background: "var(--input-fill-color, transparent)",
+      color: "var(--primary-text-color)",
+      fontSize: "14px",
+      transition: "border-color 0.15s ease, box-shadow 0.15s ease",
       cursor: "pointer",
+      outline: "none",
+    });
+    time_input.addEventListener("focus", () => {
+      time_input.style.borderColor = "var(--primary-color)";
+      time_input.style.boxShadow = "0 0 0 2px rgba(var(--rgb-primary-color, 3,169,244), 0.15)";
+    });
+    time_input.addEventListener("blur", () => {
+      time_input.style.borderColor = "var(--divider-color)";
+      time_input.style.boxShadow = "";
     });
 
     time_input.onchange = () => {
@@ -442,8 +569,7 @@ class DailyScheduleCard extends HTMLElement {
     if (type === "sunrise" || type === "sunset") {
       input.type = "number";
       input.value = parseInt(value || "0", 10);
-      symbol.icon =
-        type === "sunrise" ? "mdi:weather-sunny" : "mdi:weather-night";
+      symbol.icon = type === "sunrise" ? "mdi:weather-sunny" : "mdi:weather-night";
     } else {
       input.type = "time";
       if (value) {
@@ -463,10 +589,7 @@ class DailyScheduleCard extends HTMLElement {
       dummyInput.style.visibility = "hidden";
       this.appendChild(dummyInput);
       setTimeout(() => {
-        this._input_time_width = Math.min(
-          dummyInput.getBoundingClientRect().width,
-          100,
-        );
+        this._input_time_width = Math.min(dummyInput.getBoundingClientRect().width, 100);
         dummyInput.remove();
       }, 0);
     }
@@ -474,16 +597,15 @@ class DailyScheduleCard extends HTMLElement {
 
   _saveBackendEntity() {
     const schedule = this._dialog._schedule || [];
-
     for (const range of schedule) {
       if (range.from === null || range.to === null) {
         if (this._dialog._message.innerText !== "Missing field(s).") {
           this._dialog._message.innerText = "Missing field(s).";
+          this._dialog._message.style.display = "block";
         }
         return;
       }
     }
-
     this._hass
       .callService("daily_schedule", "set", {
         entity_id: this._dialog._entity,
@@ -492,11 +614,13 @@ class DailyScheduleCard extends HTMLElement {
       .then(() => {
         if (this._dialog._message.innerText.length > 0) {
           this._dialog._message.innerText = "";
+          this._dialog._message.style.display = "none";
         }
       })
       .catch((error) => {
         if (this._dialog._message.innerText !== error.message) {
           this._dialog._message.innerText = error.message;
+          this._dialog._message.style.display = "block";
         }
       });
   }
